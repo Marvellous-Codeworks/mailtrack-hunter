@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mailtrack Hunter</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+
+<header>
+  <img src="/static/logo.webp" alt="Marvellous Codeworks" class="logo">
+  <div>
+    <div class="header-title">Mailtrack Hunter</div>
+    <div class="header-sub">Email tracker domain discovery &mdash; feeds Block Mailtrack</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <span class="stat-value">{{ stats.processed }}</span>
+      <span class="stat-label">Emails processed</span>
+    </div>
+    <div class="stat-card pending">
+      <span class="stat-value">{{ stats.pending }}</span>
+      <span class="stat-label">Pending review</span>
+    </div>
+    <div class="stat-card approved">
+      <span class="stat-value">{{ stats.approved }}</span>
+      <span class="stat-label">Approved</span>
+    </div>
+    <div class="stat-card rejected">
+      <span class="stat-value">{{ stats.rejected }}</span>
+      <span class="stat-label">Rejected</span>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <span class="last-scan">
+      {% if last_scan %}
+        Last scan: {{ last_scan.scanned_at[:16] | replace("T", " ") }} UTC
+        &mdash; {{ last_scan.folder }},
+        {{ last_scan.emails_checked }} checked,
+        {{ last_scan.new_candidates }} new
+        &mdash; next in ~{{ poll_interval }} min
+      {% else %}
+        No scan yet &mdash; first scan in progress&hellip;
+      {% endif %}
+    </span>
+    <div class="toolbar-actions">
+      <button class="btn" id="scan-btn" onclick="triggerScan()">Scan now</button>
+      <a href="/api/export/full"  class="btn" title="Full JSON with metadata">Export full JSON</a>
+      <a href="/api/export/rules" class="btn btn-primary" title="Ready-to-paste rules.json fragment">Export rules.json</a>
+    </div>
+  </div>
+
+  <!-- Filter tabs -->
+  <div class="filter-tabs">
+    <button class="tab active" data-filter="all"      onclick="setFilter(this)">All ({{ stats.pending + stats.approved + stats.rejected }})</button>
+    <button class="tab"        data-filter="pending"  onclick="setFilter(this)">Pending ({{ stats.pending }})</button>
+    <button class="tab"        data-filter="approved" onclick="setFilter(this)">Approved ({{ stats.approved }})</button>
+    <button class="tab"        data-filter="rejected" onclick="setFilter(this)">Rejected ({{ stats.rejected }})</button>
+  </div>
+
+  <!-- Candidates table -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Domain</th>
+          <th>Example URL</th>
+          <th>Source email</th>
+          <th>Found</th>
+          <th>Claude's reasoning</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="candidates-body">
+        {% for c in candidates %}
+        <tr class="candidate-row" data-status="{{ c.status }}" data-id="{{ c.id }}">
+          <td class="col-domain"><code>{{ c.domain }}</code></td>
+          <td class="col-url"    title="{{ c.url_example }}">{{ c.url_example }}</td>
+          <td class="col-source" title="{{ c.source_sender }} — {{ c.source_subject }}">{{ c.source_sender }}</td>
+          <td class="col-date">{{ c.found_at[:10] }}</td>
+          <td class="col-reason">{{ c.claude_reasoning }}</td>
+          <td>
+            {% if c.status == "pending" %}
+              <span class="badge badge-pending">Pending</span>
+            {% elif c.status == "approved" %}
+              <span class="badge badge-approved">Approved</span>
+            {% else %}
+              <span class="badge badge-rejected">Rejected</span>
+            {% endif %}
+          </td>
+          <td class="col-actions">
+            <div class="actions-cell">
+              {% if c.status == "pending" %}
+                <button class="btn btn-sm btn-approve" onclick="updateStatus({{ c.id }}, 'approve')">Approve</button>
+                <button class="btn btn-sm btn-reject"  onclick="updateStatus({{ c.id }}, 'reject')">Reject</button>
+              {% else %}
+                <button class="btn btn-sm" onclick="updateStatus({{ c.id }}, 'reset')">Reset</button>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% else %}
+        <tr class="empty-row">
+          <td colspan="7">No candidates yet — scans will populate this table.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+</main>
+
+<script>
+  function setFilter(btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const filter = btn.dataset.filter;
+    document.querySelectorAll('.candidate-row').forEach(row => {
+      row.style.display = (filter === 'all' || row.dataset.status === filter) ? '' : 'none';
+    });
+  }
+
+  async function updateStatus(id, action) {
+    const row = document.querySelector(`.candidate-row[data-id="${id}"]`);
+    if (row) row.style.opacity = '0.4';
+    await fetch(`/api/candidates/${id}/${action}`, { method: 'POST' });
+    location.reload();
+  }
+
+  function triggerScan() {
+    const btn = document.getElementById('scan-btn');
+    btn.disabled = true;
+    btn.textContent = 'Scanning…';
+    fetch('/api/scan', { method: 'POST' }).then(() => {
+      setTimeout(() => location.reload(), 4000);
+    });
+  }
+</script>
+
+</body>
+</html>

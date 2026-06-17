@@ -1,0 +1,13 @@
+services:
+  mailtrack-hunter:
+    build: .
+    ports:
+      - "${APP_PORT:-8000}:8000"
+    env_file:
+      - .env
+    volumes:
+      - mailtrack_data:/data
+    restart: unless-stopped
+
+volumes:
+  mailtrack_data:
