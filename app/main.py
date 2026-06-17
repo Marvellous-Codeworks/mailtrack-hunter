@@ -85,6 +85,36 @@ async def reset_status(candidate_id: int):
     return {"ok": True}
 
 
+@app.post("/api/candidates/bulk-approve")
+async def bulk_approve(ids: list[int]):
+    with get_conn() as conn:
+        conn.executemany(
+            "UPDATE tracker_candidates SET status='approved' WHERE id=?",
+            [(i,) for i in ids]
+        )
+    return {"ok": True, "updated": len(ids)}
+
+
+@app.post("/api/candidates/bulk-reject")
+async def bulk_reject(ids: list[int]):
+    with get_conn() as conn:
+        conn.executemany(
+            "UPDATE tracker_candidates SET status='rejected' WHERE id=?",
+            [(i,) for i in ids]
+        )
+    return {"ok": True, "updated": len(ids)}
+
+
+@app.post("/api/candidates/bulk-delete")
+async def bulk_delete(ids: list[int]):
+    with get_conn() as conn:
+        conn.executemany(
+            "DELETE FROM tracker_candidates WHERE id=?",
+            [(i,) for i in ids]
+        )
+    return {"ok": True, "deleted": len(ids)}
+
+
 @app.delete("/api/candidates/{candidate_id}")
 async def delete_candidate(candidate_id: int):
     with get_conn() as conn:

@@ -110,6 +110,15 @@
     </div>
   </details>
 
+  <!-- Bulk action bar (visible only when rows are selected) -->
+  <div class="bulk-bar" id="bulk-bar">
+    <span id="bulk-count">0 selected</span>
+    <button class="btn btn-sm btn-approve" onclick="bulkAction('approve')">Approve all</button>
+    <button class="btn btn-sm btn-reject"  onclick="bulkAction('reject')">Reject all</button>
+    <button class="btn btn-sm btn-reject"  onclick="bulkAction('delete')">Delete all</button>
+    <button class="btn btn-sm"             onclick="clearSelection()">Clear</button>
+  </div>
+
   <!-- Filter tabs -->
   <div class="filter-tabs">
     <button class="tab active" data-filter="all"      onclick="setFilter(this)">All ({{ stats.pending + stats.approved + stats.rejected }})</button>
@@ -123,6 +132,7 @@
     <table>
       <thead>
         <tr>
+          <th><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
           <th>Domain</th>
           <th>Example URL</th>
           <th>Source email</th>
@@ -135,6 +145,7 @@
       <tbody id="candidates-body">
         {% for c in candidates %}
         <tr class="candidate-row" data-status="{{ c.status }}" data-id="{{ c.id }}">
+          <td><input type="checkbox" class="row-check" value="{{ c.id }}" onchange="updateBulkBar()"></td>
           <td class="col-domain"><code>{{ c.domain }}</code></td>
           <td class="col-url"    title="{{ c.url_example }}">{{ c.url_example }}</td>
           <td class="col-source" title="{{ c.source_sender }} — {{ c.source_subject }}">{{ c.source_sender }}</td>
@@ -222,6 +233,44 @@
     fetch('/api/scan', { method: 'POST' }).then(() => {
       setTimeout(reloadKeepingFilter, 4000);
     });
+  }
+
+  function getSelectedIds() {
+    return [...document.querySelectorAll('.row-check:checked')].map(c => parseInt(c.value));
+  }
+
+  function updateBulkBar() {
+    const ids = getSelectedIds();
+    const bar = document.getElementById('bulk-bar');
+    const count = document.getElementById('bulk-count');
+    bar.style.display = ids.length ? 'flex' : 'none';
+    count.textContent = `${ids.length} selected`;
+  }
+
+  function toggleSelectAll(cb) {
+    document.querySelectorAll('.candidate-row:not([style*="display: none"]) .row-check')
+      .forEach(c => c.checked = cb.checked);
+    updateBulkBar();
+  }
+
+  function clearSelection() {
+    document.querySelectorAll('.row-check').forEach(c => c.checked = false);
+    document.getElementById('select-all').checked = false;
+    updateBulkBar();
+  }
+
+  async function bulkAction(action) {
+    const ids = getSelectedIds();
+    if (!ids.length) return;
+    const endpoint = action === 'delete' ? '/api/candidates/bulk-delete'
+                   : action === 'approve' ? '/api/candidates/bulk-approve'
+                   : '/api/candidates/bulk-reject';
+    await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(ids),
+    });
+    reloadKeepingFilter();
   }
 
   // Restore active filter on page load
