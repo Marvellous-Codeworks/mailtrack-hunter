@@ -99,7 +99,7 @@ async def purge_rejected():
     return {"ok": True, "deleted": result.rowcount}
 
 
-@app.post("/api/clean")
+@app.api_route("/api/clean", methods=["GET", "POST"])
 async def clean_candidates():
     """Remove pending candidates that would be excluded by current extractor rules."""
     from urllib.parse import urlparse
