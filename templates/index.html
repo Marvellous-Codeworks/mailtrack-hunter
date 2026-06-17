@@ -101,7 +101,7 @@
     <div class="legend-body">
       <div class="legend-section">
         <strong>Workflow</strong>
-        <p>Mailtrack Hunter scans your inbox periodically. It pre-filters commercial emails by header (free), extracts image URLs, discards known CDNs and click-tracking domains, then asks Claude to classify only unknown silent pixels — tiny invisible images that silently report email opens. Candidates appear here for your review before anything touches the extension. Already-known domains (any status) are never sent to Claude again.</p>
+        <p>Mailtrack Hunter scans your inbox periodically. It pre-filters commercial emails by header (free), extracts image URLs, discards known CDNs and click-tracking domains, then asks Claude to classify only unknown silent pixels — tiny invisible images that silently report email opens. Together with the classification, Claude also suggests the optimal <code>declarativeNetRequest</code> <code>urlFilter</code> value for each tracker (visible as a small blue hint below the domain). Candidates appear here for your review before anything touches the extension. Already-known domains (any status) are never sent to Claude again.</p>
       </div>
       <div class="legend-grid">
         <div>
@@ -127,7 +127,7 @@
           <strong>Export &amp; propose</strong>
           <ul>
             <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
-            <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code></li>
+            <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code>; each rule's <code>urlFilter</code> uses Claude's suggestion when available, falling back to a local heuristic for older candidates</li>
             <li><b>Propose to Block Mailtrack (N)</b> — opens a pre-filled GitHub Issue with as many approved candidates as fit within GitHub's URL limit (batch), skipping those already covered by Block Mailtrack's live rules (fetched from GitHub, refreshed every hour); candidates are marked as <span class="badge badge-proposed">Proposed</span> only after you confirm by entering the issue number; if more remain, the button stays active and shows the updated count — keep clicking until it reaches zero; click <b>&times;</b> next to the badge to reset individually, or use <b>Select</b> + <b>Reset proposed</b> in the bulk bar for multiple candidates at once</li>
           </ul>
         </div>
