@@ -1,6 +1,7 @@
 # Mailtrack Hunter
 
 A self-hosted Docker container that monitors your inbox via IMAP, identifies commercial emails, and uses the Claude API to discover unknown email tracker domains — feeding the [Block Mailtrack](https://github.com/Marvellous-Codeworks/block-mailtrack) browser extension's blocklist.
+
 ---
 
 ## How it works
