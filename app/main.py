@@ -85,6 +85,7 @@ async def dashboard(request: Request):
         "version":         APP_VERSION,
         "github_url":      GITHUB_URL,
         "unproposed_count": unproposed_count,
+        "rules_cache":     _rules_cache_info(),
     })
 
 
@@ -315,6 +316,13 @@ def _already_blocked_domains() -> set[str]:
             domain = url_filter[2:].split("^")[0].split("/")[0]
             domains.add(domain)
     return domains
+
+
+def _rules_cache_info() -> dict:
+    if _RULES_CACHE is None:
+        return {"available": False, "count": 0, "age_minutes": None}
+    age_minutes = int((time.monotonic() - _RULES_CACHE_AT) / 60)
+    return {"available": True, "count": len(_RULES_CACHE), "age_minutes": age_minutes}
 
 
 @app.get("/api/export/github-issue")

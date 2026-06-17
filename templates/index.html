@@ -56,17 +56,30 @@
 
   <!-- Toolbar -->
   <div class="toolbar">
-    <span class="last-scan">
-      {% if last_scan %}
-        Last scan: {{ last_scan.scanned_at[:16] | replace("T", " ") }} UTC
-        &mdash; {{ last_scan.folder }},
-        {{ last_scan.emails_checked }} checked,
-        {{ last_scan.new_candidates }} new
-        &mdash; next in ~{{ poll_interval }} min
-      {% else %}
-        No scan yet &mdash; first scan in progress&hellip;
-      {% endif %}
-    </span>
+    <div class="toolbar-meta">
+      <span class="last-scan">
+        {% if last_scan %}
+          Last scan: {{ last_scan.scanned_at[:16] | replace("T", " ") }} UTC
+          &mdash; {{ last_scan.folder }},
+          {{ last_scan.emails_checked }} checked,
+          {{ last_scan.new_candidates }} new
+          &mdash; next in ~{{ poll_interval }} min
+        {% else %}
+          No scan yet &mdash; first scan in progress&hellip;
+        {% endif %}
+      </span>
+      <span class="rules-cache-info {% if not rules_cache.available %}rules-cache-warn{% endif %}">
+        {% if rules_cache.available %}
+          Block Mailtrack rules: {{ rules_cache.count }} rules
+          &mdash; fetched
+          {% if rules_cache.age_minutes == 0 %}just now
+          {% elif rules_cache.age_minutes == 1 %}1 minute ago
+          {% else %}{{ rules_cache.age_minutes }} minutes ago{% endif %}
+        {% else %}
+          Block Mailtrack rules: not available
+        {% endif %}
+      </span>
+    </div>
     <div class="toolbar-actions">
       <button class="btn" id="scan-btn" onclick="triggerScan()">Scan now</button>
       <button class="btn" onclick="autoClassifyByParent()" title="Auto-approve/reject pending candidates based on their parent domain's existing status">Auto-classify known</button>
@@ -111,18 +124,19 @@
           </ul>
         </div>
         <div>
-          <strong>Export</strong>
+          <strong>Export &amp; propose</strong>
           <ul>
             <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
-            <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code>; dedicated tracker subdomains are blocked at domain level, shared domains at path level</li>
-            <li><b>Propose to Block Mailtrack</b> — opens a pre-filled GitHub Issue on block-mailtrack with all approved candidates not yet proposed and not already covered by existing rules; marks them as proposed so they are never re-submitted; after creating the issue you can enter its number to get a direct link in the table</li>
+            <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code></li>
+            <li><b>Propose to Block Mailtrack (N)</b> — opens a pre-filled GitHub Issue with N approved candidates not yet proposed and not already covered by Block Mailtrack's live rules (fetched from GitHub, refreshed every hour); candidates are marked as <span class="badge badge-proposed">Proposed</span> only after you confirm by entering the issue number; click <b>&times;</b> next to the badge to reset and re-propose</li>
           </ul>
         </div>
         <div>
           <strong>Maintenance API</strong>
           <ul>
-            <li><code>GET /api/clean</code> — removes pending candidates that would be excluded by current filtering rules (ESP click-tracking domains, non-image extensions); call this after updating the scanner logic</li>
+            <li><code>GET /api/clean</code> — removes pending candidates excluded by current filtering rules (ESP click-tracking domains, non-image extensions); call after updating scanner logic</li>
             <li><code>GET /api/auto-classify-by-parent</code> — same as the toolbar button, callable directly</li>
+            <li><code>POST /api/candidates/reset-proposed</code> — resets <span class="badge badge-proposed">Proposed</span> status on a list of candidate IDs, making them available for re-proposing</li>
           </ul>
         </div>
       </div>
