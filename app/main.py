@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from .database import get_conn, init_db
+from .extractor import _is_esp_click_domain, _NON_IMAGE_EXT_RE
 from .scheduler import scan, start_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -82,6 +83,47 @@ async def reset_status(candidate_id: int):
     with get_conn() as conn:
         conn.execute("UPDATE tracker_candidates SET status='pending' WHERE id=?", (candidate_id,))
     return {"ok": True}
+
+
+@app.delete("/api/candidates/{candidate_id}")
+async def delete_candidate(candidate_id: int):
+    with get_conn() as conn:
+        conn.execute("DELETE FROM tracker_candidates WHERE id=?", (candidate_id,))
+    return {"ok": True}
+
+
+@app.post("/api/candidates/purge-rejected")
+async def purge_rejected():
+    with get_conn() as conn:
+        result = conn.execute("DELETE FROM tracker_candidates WHERE status='rejected'")
+    return {"ok": True, "deleted": result.rowcount}
+
+
+@app.post("/api/clean")
+async def clean_candidates():
+    """Remove pending candidates that would be excluded by current extractor rules."""
+    from urllib.parse import urlparse
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, domain, url_example FROM tracker_candidates WHERE status='pending'"
+        ).fetchall()
+
+        removed = 0
+        for row in rows:
+            domain = row["domain"]
+            url = row["url_example"]
+            parsed = urlparse(url)
+
+            should_remove = (
+                _is_esp_click_domain(domain)
+                or bool(_NON_IMAGE_EXT_RE.search(parsed.path))
+            )
+
+            if should_remove:
+                conn.execute("DELETE FROM tracker_candidates WHERE id=?", (row["id"],))
+                removed += 1
+
+    return {"ok": True, "removed": removed}
 
 
 @app.get("/api/candidates")
