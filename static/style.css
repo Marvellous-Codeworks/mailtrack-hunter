@@ -202,6 +202,12 @@ code { font-family: "SF Mono", "Fira Code", Menlo, monospace; font-size: 12px; }
 .badge-proposed  { background: #e0e7ff; color: #4338ca; }
 .badge-issue     { background: #f0fdf4; color: #166534; text-decoration: none; }
 .badge-issue:hover { text-decoration: underline; }
+.proposed-cell   { display: inline-flex; align-items: center; gap: 4px; }
+.btn-reset-proposed {
+  background: none; border: none; cursor: pointer;
+  color: #a5b4fc; font-size: 13px; line-height: 1; padding: 0 2px;
+}
+.btn-reset-proposed:hover { color: #4338ca; }
 
 .actions-cell { display: flex; gap: 5px; align-items: center; }
 

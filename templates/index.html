@@ -75,6 +75,7 @@
       <button class="btn" onclick="window.location='/api/export/full'" title="Full JSON with metadata">Export full JSON</button>
       <button class="btn btn-primary" onclick="window.location='/api/export/rules'" title="Ready-to-paste rules.json fragment">Export rules.json</button>
       <button class="btn btn-primary" id="propose-btn" onclick="proposeToBlockMailtrack()"
+        data-label="Propose to Block Mailtrack{% if unproposed_count > 0 %} ({{ unproposed_count }}){% endif %}"
         {% if unproposed_count == 0 %}disabled title="No new approved candidates to propose"{% else %}title="Open a pre-filled GitHub Issue on block-mailtrack with {{ unproposed_count }} new rule(s)"{% endif %}>
         Propose to Block Mailtrack{% if unproposed_count > 0 %} ({{ unproposed_count }}){% endif %}
       </button>
@@ -184,7 +185,10 @@
               <a href="https://github.com/Marvellous-Codeworks/block-mailtrack/issues/{{ c.github_issue_id }}"
                  target="_blank" rel="noopener" class="badge badge-issue">#{{ c.github_issue_id }}</a>
             {% elif c.github_proposed_at %}
-              <span class="badge badge-proposed" title="Proposed on {{ c.github_proposed_at[:10] }}">Proposed</span>
+              <span class="proposed-cell">
+                <span class="badge badge-proposed" title="Proposed on {{ c.github_proposed_at[:10] }}">Proposed</span>
+                <button class="btn-reset-proposed" onclick="resetProposed({{ c.id }})" title="Reset — allow re-proposing">&times;</button>
+              </span>
             {% endif %}
           </td>
           <td class="col-actions">
@@ -327,7 +331,7 @@
     if (!data.ok) {
       alert(data.message);
       btn.disabled = false;
-      btn.textContent = 'Propose to Block Mailtrack';
+      btn.textContent = btn.dataset.label;
       return;
     }
 
@@ -336,7 +340,7 @@
     const issueNum = prompt(
       `GitHub Issue opened with ${data.count} rule(s)` +
       (data.skipped ? ` (${data.skipped} already in block-mailtrack, skipped)` : '') +
-      `.\n\nEnter the issue number to track it (leave blank to skip):`,
+      `.\n\nEnter the issue number to record it (leave blank to cancel and try again later):`,
       ''
     );
 
@@ -344,10 +348,21 @@
       await fetch('/api/candidates/record-issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issue_id: parseInt(issueNum.trim()) }),
+        body: JSON.stringify({ issue_id: parseInt(issueNum.trim()), ids: data.ids }),
       });
+      reloadKeepingFilter();
+    } else {
+      btn.disabled = false;
+      btn.textContent = btn.dataset.label;
     }
+  }
 
+  async function resetProposed(id) {
+    await fetch('/api/candidates/reset-proposed', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([id]),
+    });
     reloadKeepingFilter();
   }
 
