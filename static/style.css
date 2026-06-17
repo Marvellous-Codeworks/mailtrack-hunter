@@ -160,9 +160,12 @@ code { font-family: "SF Mono", "Fira Code", Menlo, monospace; font-size: 12px; }
   font-weight: 600;
   letter-spacing: .03em;
 }
-.badge-approved { background: #dcfce7; color: var(--success); }
-.badge-rejected { background: #fee2e2; color: var(--danger);  }
-.badge-pending  { background: #fef9c3; color: var(--warning); }
+.badge-approved  { background: #dcfce7; color: var(--success); }
+.badge-rejected  { background: #fee2e2; color: var(--danger);  }
+.badge-pending   { background: #fef9c3; color: var(--warning); }
+.badge-proposed  { background: #e0e7ff; color: #4338ca; }
+.badge-issue     { background: #f0fdf4; color: #166534; text-decoration: none; }
+.badge-issue:hover { text-decoration: underline; }
 
 .actions-cell { display: flex; gap: 5px; align-items: center; }
 

@@ -1,7 +1,12 @@
 import asyncio
+import json
 import logging
 import os
+import time
+import urllib.parse
+import urllib.request
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -16,6 +21,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 APP_VERSION = "1.0.0"
 GITHUB_URL = "https://github.com/Marvellous-Codeworks/mailtrack-hunter"
+BLOCK_MAILTRACK_GITHUB = "https://github.com/Marvellous-Codeworks/block-mailtrack"
+_BLOCK_MAILTRACK_RULES_URL = "https://raw.githubusercontent.com/Marvellous-Codeworks/block-mailtrack/master/rules/rules.json"
+_RULES_CACHE: list | None = None
+_RULES_CACHE_AT: float = 0
+_RULES_CACHE_TTL = 3600
 
 _scheduler = None
 
@@ -37,6 +47,7 @@ templates = Jinja2Templates(directory="templates")
 
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
+    already_blocked = _already_blocked_domains()
     with get_conn() as conn:
         stats = {
             "pending":   conn.execute("SELECT COUNT(*) FROM tracker_candidates WHERE status='pending'").fetchone()[0],
@@ -50,17 +61,30 @@ async def dashboard(request: Request):
         candidates = [dict(r) for r in conn.execute(
             "SELECT * FROM tracker_candidates ORDER BY found_at DESC"
         ).fetchall()]
+        unproposed_count = conn.execute(
+            "SELECT COUNT(*) FROM tracker_candidates WHERE status='approved' AND github_proposed_at IS NULL"
+        ).fetchone()[0]
+
+    # subtract those already covered by block-mailtrack rules
+    if already_blocked:
+        unproposed_count = sum(
+            1 for c in candidates
+            if c["status"] == "approved"
+            and c["github_proposed_at"] is None
+            and c["domain"] not in already_blocked
+        )
 
     last_scan = dict(last_scan_row) if last_scan_row else None
 
     return templates.TemplateResponse("index.html", {
-        "request":      request,
-        "stats":        stats,
-        "last_scan":    last_scan,
-        "candidates":   candidates,
-        "poll_interval": int(os.getenv("POLL_INTERVAL_MINUTES", 30)),
-        "version":      APP_VERSION,
-        "github_url":   GITHUB_URL,
+        "request":         request,
+        "stats":           stats,
+        "last_scan":       last_scan,
+        "candidates":      candidates,
+        "poll_interval":   int(os.getenv("POLL_INTERVAL_MINUTES", 30)),
+        "version":         APP_VERSION,
+        "github_url":      GITHUB_URL,
+        "unproposed_count": unproposed_count,
     })
 
 
@@ -258,6 +282,128 @@ async def export_rules():
         content=rules,
         headers={"Content-Disposition": "attachment; filename=rules_extra.json"},
     )
+
+
+def _fetch_block_mailtrack_rules() -> list:
+    global _RULES_CACHE, _RULES_CACHE_AT
+    if _RULES_CACHE is not None and (time.monotonic() - _RULES_CACHE_AT) < _RULES_CACHE_TTL:
+        return _RULES_CACHE
+    try:
+        with urllib.request.urlopen(_BLOCK_MAILTRACK_RULES_URL, timeout=5) as resp:
+            data = json.loads(resp.read())
+        _RULES_CACHE = data
+        _RULES_CACHE_AT = time.monotonic()
+        logging.info("block-mailtrack rules refreshed from GitHub (%d rules)", len(data))
+    except Exception as exc:
+        if _RULES_CACHE is not None:
+            logging.warning(
+                "Could not refresh block-mailtrack rules from GitHub (%s) — using stale cache (%d rules)",
+                exc, len(_RULES_CACHE),
+            )
+        else:
+            logging.error(
+                "Could not fetch block-mailtrack rules from GitHub (%s) — already-blocked check disabled", exc
+            )
+    return _RULES_CACHE or []
+
+
+def _already_blocked_domains() -> set[str]:
+    domains: set[str] = set()
+    for rule in _fetch_block_mailtrack_rules():
+        url_filter = rule.get("condition", {}).get("urlFilter", "")
+        if url_filter.startswith("||"):
+            domain = url_filter[2:].split("^")[0].split("/")[0]
+            domains.add(domain)
+    return domains
+
+
+@app.get("/api/export/github-issue")
+async def export_github_issue():
+    already_blocked = _already_blocked_domains()
+
+    with get_conn() as conn:
+        rows = conn.execute(
+            "SELECT id, domain, url_example, claude_reasoning FROM tracker_candidates "
+            "WHERE status='approved' AND github_proposed_at IS NULL ORDER BY found_at"
+        ).fetchall()
+
+    new_rows = [r for r in rows if r["domain"] not in already_blocked]
+    skipped = len(rows) - len(new_rows)
+
+    if not new_rows:
+        msg = "No new approved candidates to propose."
+        if skipped:
+            msg += f" ({skipped} already covered by block-mailtrack rules.)"
+        return JSONResponse({"ok": False, "message": msg}, status_code=400)
+
+    ids = [r["id"] for r in new_rows]
+
+    table_lines = "\n".join(
+        f"| `{r['domain']}` | `{_make_url_filter(r['domain'], r['url_example'])}` | {r['claude_reasoning'] or ''} |"
+        for r in new_rows
+    )
+
+    rules_fragment = []
+    for i, r in enumerate(new_rows, start=100):
+        rules_fragment.append({
+            "id": i,
+            "priority": 2,
+            "action": {"type": "block"},
+            "condition": {
+                "urlFilter": _make_url_filter(r["domain"], r["url_example"]),
+                "resourceTypes": ["image", "ping", "other", "xmlhttprequest"],
+            },
+        })
+
+    body = (
+        f"## New tracker domains from Mailtrack Hunter\n\n"
+        f"{len(new_rows)} new tracking domain(s) to add to `rules/rules.json`"
+        + (f" ({skipped} already covered, skipped)" if skipped else "")
+        + f":\n\n"
+        f"| Domain | Proposed filter | Reason |\n"
+        f"|--------|----------------|--------|\n"
+        f"{table_lines}\n\n"
+        f"### rules.json fragment\n\n"
+        f"```json\n{json.dumps(rules_fragment, indent=2)}\n```\n\n"
+        f"*Generated by [Mailtrack Hunter]({GITHUB_URL})*"
+    )
+
+    title = f"Add {len(new_rows)} new tracker rule(s) from Mailtrack Hunter"
+    issue_url = (
+        f"{BLOCK_MAILTRACK_GITHUB}/issues/new"
+        f"?title={urllib.parse.quote(title)}"
+        f"&body={urllib.parse.quote(body)}"
+    )
+
+    now = datetime.now(timezone.utc).isoformat()
+    with get_conn() as conn:
+        conn.executemany(
+            "UPDATE tracker_candidates SET github_proposed_at=? WHERE id=?",
+            [(now, id_) for id_ in ids],
+        )
+
+    return {"ok": True, "url": issue_url, "count": len(new_rows), "skipped": skipped}
+
+
+@app.post("/api/candidates/record-issue")
+async def record_issue(payload: dict):
+    issue_id = int(payload.get("issue_id", 0))
+    ids = payload.get("ids")
+    if not issue_id:
+        return JSONResponse({"ok": False, "message": "issue_id required"}, status_code=400)
+    with get_conn() as conn:
+        if ids:
+            conn.executemany(
+                "UPDATE tracker_candidates SET github_issue_id=? WHERE id=?",
+                [(issue_id, id_) for id_ in ids],
+            )
+        else:
+            conn.execute(
+                "UPDATE tracker_candidates SET github_issue_id=? "
+                "WHERE github_proposed_at IS NOT NULL AND github_issue_id IS NULL",
+                (issue_id,),
+            )
+    return {"ok": True}
 
 
 @app.post("/api/scan")

@@ -74,6 +74,10 @@
       <button class="btn" id="bulk-toggle" onclick="toggleBulkMode()" title="Toggle multi-select mode">Select</button>
       <a href="/api/export/full"  class="btn" title="Full JSON with metadata">Export full JSON</a>
       <a href="/api/export/rules" class="btn btn-primary" title="Ready-to-paste rules.json fragment">Export rules.json</a>
+      <button class="btn btn-primary" id="propose-btn" onclick="proposeToBlockMailtrack()"
+        {% if unproposed_count == 0 %}disabled title="No new approved candidates to propose"{% else %}title="Open a pre-filled GitHub Issue on block-mailtrack with {{ unproposed_count }} new rule(s)"{% endif %}>
+        Propose to Block Mailtrack{% if unproposed_count > 0 %} ({{ unproposed_count }}){% endif %}
+      </button>
     </div>
   </div>
 
@@ -110,6 +114,7 @@
           <ul>
             <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
             <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code>; dedicated tracker subdomains are blocked at domain level, shared domains at path level</li>
+            <li><b>Propose to Block Mailtrack</b> — opens a pre-filled GitHub Issue on block-mailtrack with all approved candidates not yet proposed and not already covered by existing rules; marks them as proposed so they are never re-submitted; after creating the issue you can enter its number to get a direct link in the table</li>
           </ul>
         </div>
         <div>
@@ -152,6 +157,7 @@
           <th>Found</th>
           <th>Claude's reasoning</th>
           <th>Status</th>
+          <th>Issue</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -171,6 +177,14 @@
               <span class="badge badge-approved">Approved</span>
             {% else %}
               <span class="badge badge-rejected">Rejected</span>
+            {% endif %}
+          </td>
+          <td class="col-issue">
+            {% if c.github_issue_id %}
+              <a href="https://github.com/Marvellous-Codeworks/block-mailtrack/issues/{{ c.github_issue_id }}"
+                 target="_blank" rel="noopener" class="badge badge-issue">#{{ c.github_issue_id }}</a>
+            {% elif c.github_proposed_at %}
+              <span class="badge badge-proposed" title="Proposed on {{ c.github_proposed_at[:10] }}">Proposed</span>
             {% endif %}
           </td>
           <td class="col-actions">
@@ -299,6 +313,41 @@
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(ids),
     });
+    reloadKeepingFilter();
+  }
+
+  async function proposeToBlockMailtrack() {
+    const btn = document.getElementById('propose-btn');
+    btn.disabled = true;
+    btn.textContent = 'Preparing…';
+
+    const res = await fetch('/api/export/github-issue');
+    const data = await res.json();
+
+    if (!data.ok) {
+      alert(data.message);
+      btn.disabled = false;
+      btn.textContent = 'Propose to Block Mailtrack';
+      return;
+    }
+
+    window.open(data.url, '_blank', 'noopener');
+
+    const issueNum = prompt(
+      `GitHub Issue opened with ${data.count} rule(s)` +
+      (data.skipped ? ` (${data.skipped} already in block-mailtrack, skipped)` : '') +
+      `.\n\nEnter the issue number to track it (leave blank to skip):`,
+      ''
+    );
+
+    if (issueNum && /^\d+$/.test(issueNum.trim())) {
+      await fetch('/api/candidates/record-issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ issue_id: parseInt(issueNum.trim()) }),
+      });
+    }
+
     reloadKeepingFilter();
   }
 

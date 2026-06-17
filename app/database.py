@@ -5,6 +5,16 @@ from contextlib import contextmanager
 DB_PATH = os.getenv("DB_PATH", "/data/mailtrack_hunter.db")
 
 
+def _migrate(conn):
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(tracker_candidates)")}
+    for col, definition in [
+        ("github_proposed_at", "TEXT"),
+        ("github_issue_id",    "INTEGER"),
+    ]:
+        if col not in existing:
+            conn.execute(f"ALTER TABLE tracker_candidates ADD COLUMN {col} {definition}")
+
+
 def init_db():
     with get_conn() as conn:
         conn.executescript("""
@@ -25,7 +35,9 @@ def init_db():
                 source_subject   TEXT,
                 found_at         TEXT NOT NULL,
                 claude_reasoning TEXT,
-                status           TEXT NOT NULL DEFAULT 'pending'
+                status           TEXT NOT NULL DEFAULT 'pending',
+                github_proposed_at TEXT,
+                github_issue_id    INTEGER
             );
 
             CREATE TABLE IF NOT EXISTS scan_log (
@@ -36,6 +48,7 @@ def init_db():
                 new_candidates  INTEGER NOT NULL DEFAULT 0
             );
         """)
+        _migrate(conn)
 
 
 @contextmanager
