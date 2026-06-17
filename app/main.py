@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import re
 import time
 import urllib.parse
 import urllib.request
@@ -247,18 +248,51 @@ async def export_full():
 
 
 _DEDICATED_TRACKER_PREFIXES = {
-    "t", "trk", "track", "open", "pixel", "beacon", "spy", "wf", "e", "mltrk", "r"
+    "t", "trk", "track", "open", "pixel", "beacon", "spy", "wf", "e", "mltrk", "r",
+    "ctrk", "mjt", "mj", "ablink", "click", "em", "img", "pxl", "imp", "log",
 }
+
+# Segment that looks like an opaque per-recipient token: UUID, long hex, long encoded string
+_DYNAMIC_SEGMENT_RE = re.compile(
+    r'^(?:'
+    r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}'  # UUID
+    r'|[0-9a-f]{12,}'                                                    # long hex hash
+    r'|[0-9a-zA-Z+/=_\-\.]{20,}'                                        # long opaque token (dots included)
+    r')$',
+    re.IGNORECASE,
+)
+
+
+def _is_dynamic_segment(seg: str) -> bool:
+    if _DYNAMIC_SEGMENT_RE.match(seg):
+        return True
+    # Path segments containing + or = are URL-encoded tracking params, not stable names
+    if any(c in seg for c in ('+', '=', '%')):
+        return True
+    return False
+
+
+def _stable_path_prefix(path: str) -> str | None:
+    """Return the stable leading path prefix, stopping before the first dynamic segment.
+    Returns None if the very first segment is already dynamic (block at domain level)."""
+    segments = [s for s in path.split("/") if s]
+    stable = []
+    for seg in segments:
+        if _is_dynamic_segment(seg):
+            break
+        stable.append(seg)
+    return ("/" + "/".join(stable)) if stable else None
 
 
 def _make_url_filter(domain: str, url_example: str) -> str:
-    """Block at domain level for dedicated tracker subdomains; at path level otherwise."""
-    from urllib.parse import urlparse
     prefix = domain.split(".")[0].lower()
     if prefix in _DEDICATED_TRACKER_PREFIXES:
         return f"||{domain}^"
-    parsed = urlparse(url_example)
-    return f"||{domain}{parsed.path}^"
+    parsed = urllib.parse.urlparse(url_example)
+    stable = _stable_path_prefix(parsed.path)
+    if stable is None:
+        return f"||{domain}^"
+    return f"||{domain}{stable}^"
 
 
 @app.get("/api/export/rules")
