@@ -83,29 +83,40 @@
     <div class="legend-body">
       <div class="legend-section">
         <strong>Workflow</strong>
-        <p>Mailtrack Hunter scans your inbox periodically, pre-filters commercial emails by header (free), extracts image URLs, then asks Claude to classify unknown ones as potential trackers. Candidates appear here for your review before anything touches the extension.</p>
+        <p>Mailtrack Hunter scans your inbox periodically. It pre-filters commercial emails by header (free), extracts image URLs, discards known CDNs and click-tracking domains, then asks Claude to classify only unknown silent pixels — tiny invisible images that silently report email opens. Candidates appear here for your review before anything touches the extension. Already-known domains (any status) are never sent to Claude again.</p>
       </div>
       <div class="legend-grid">
         <div>
           <strong>Candidate actions</strong>
           <ul>
             <li><span class="badge badge-pending">Pending</span> — found by Claude, waiting for your review</li>
-            <li><b>Approve</b> — confirms the domain is a real tracker; it will appear in both exports</li>
-            <li><b>Reject</b> — marks it as a false positive; excluded from exports but kept as history</li>
+            <li><b>Approve</b> — confirms the domain is a real tracker; included in exports</li>
+            <li><b>Reject</b> — marks it as a false positive; excluded from exports, kept as history</li>
             <li><b>Reset</b> — moves an approved or rejected candidate back to Pending</li>
-          </ul>
-        </div>
-        <div>
-          <strong>Export buttons</strong>
-          <ul>
-            <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
-            <li><b>Export rules.json</b> — approved domains formatted as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code></li>
+            <li><b>&times;</b> — permanently deletes the candidate from the database</li>
           </ul>
         </div>
         <div>
           <strong>Toolbar</strong>
           <ul>
-            <li><b>Scan now</b> — triggers an immediate scan without waiting for the next scheduled interval</li>
+            <li><b>Scan now</b> — triggers an immediate scan without waiting for the next interval</li>
+            <li><b>Auto-approve known</b> — automatically approves pending candidates whose parent domain (e.g. <code>example.com</code>) is already approved under a different subdomain</li>
+            <li><b>Purge rejected</b> — permanently deletes all rejected candidates to keep the table clean</li>
+            <li><b>Select</b> — enables multi-select mode with checkboxes for bulk approve / reject / delete; click <b>Done</b> to exit</li>
+          </ul>
+        </div>
+        <div>
+          <strong>Export</strong>
+          <ul>
+            <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
+            <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code>; dedicated tracker subdomains are blocked at domain level, shared domains at path level</li>
+          </ul>
+        </div>
+        <div>
+          <strong>Maintenance API</strong>
+          <ul>
+            <li><code>GET /api/clean</code> — removes pending candidates that would be excluded by current filtering rules (ESP click-tracking domains, non-image extensions); call this after updating the scanner logic</li>
+            <li><code>GET /api/auto-approve-by-parent</code> — same as the toolbar button, callable directly</li>
           </ul>
         </div>
       </div>
