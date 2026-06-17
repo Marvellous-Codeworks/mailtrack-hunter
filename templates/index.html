@@ -71,6 +71,7 @@
       <button class="btn" id="scan-btn" onclick="triggerScan()">Scan now</button>
       <button class="btn btn-approve" onclick="autoApproveByParent()" title="Auto-approve pending candidates whose parent domain is already approved">Auto-approve known</button>
       <button class="btn btn-reject" onclick="purgeRejected()" title="Permanently delete all rejected candidates">Purge rejected</button>
+      <button class="btn" id="bulk-toggle" onclick="toggleBulkMode()" title="Toggle multi-select mode">Select</button>
       <a href="/api/export/full"  class="btn" title="Full JSON with metadata">Export full JSON</a>
       <a href="/api/export/rules" class="btn btn-primary" title="Ready-to-paste rules.json fragment">Export rules.json</a>
     </div>
@@ -133,7 +134,7 @@
     <table>
       <thead>
         <tr>
-          <th><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
+          <th class="col-check" style="display:none"><input type="checkbox" id="select-all" onclick="toggleSelectAll(this)"></th>
           <th>Domain</th>
           <th>Example URL</th>
           <th>Source email</th>
@@ -146,7 +147,7 @@
       <tbody id="candidates-body">
         {% for c in candidates %}
         <tr class="candidate-row" data-status="{{ c.status }}" data-id="{{ c.id }}">
-          <td><input type="checkbox" class="row-check" value="{{ c.id }}" onchange="updateBulkBar()"></td>
+          <td class="col-check" style="display:none"><input type="checkbox" class="row-check" value="{{ c.id }}" onchange="updateBulkBar()"></td>
           <td class="col-domain"><code>{{ c.domain }}</code></td>
           <td class="col-url"    title="{{ c.url_example }}">{{ c.url_example }}</td>
           <td class="col-source" title="{{ c.source_sender }} — {{ c.source_subject }}">{{ c.source_sender }}</td>
@@ -241,6 +242,15 @@
     fetch('/api/scan', { method: 'POST' }).then(() => {
       setTimeout(reloadKeepingFilter, 4000);
     });
+  }
+
+  let bulkMode = false;
+
+  function toggleBulkMode() {
+    bulkMode = !bulkMode;
+    document.querySelectorAll('.col-check').forEach(el => el.style.display = bulkMode ? '' : 'none');
+    document.getElementById('bulk-toggle').textContent = bulkMode ? 'Done' : 'Select';
+    if (!bulkMode) { clearSelection(); }
   }
 
   function getSelectedIds() {
