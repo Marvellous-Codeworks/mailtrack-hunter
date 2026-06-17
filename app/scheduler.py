@@ -1,6 +1,7 @@
 import logging
 import os
 from datetime import datetime, timezone, timedelta
+from urllib.parse import urlparse
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -50,7 +51,19 @@ def scan():
                 html = get_html_body(item["msg"])
                 candidates = extract_candidate_urls(html)
 
-                # prefer URLs that already look like trackers; fall back to all candidates
+                # Skip URLs from domains already in the database (any status).
+                # Approved domains are already covered; rejected ones are intentionally ignored.
+                with get_conn() as conn:
+                    known_domains = {
+                        r[0] for r in conn.execute("SELECT domain FROM tracker_candidates").fetchall()
+                    }
+
+                candidates = [
+                    u for u in candidates
+                    if urlparse(u).netloc.lower().lstrip("www.") not in known_domains
+                ]
+
+                # Prefer URLs that already look like trackers; fall back to all candidates.
                 to_classify = [u for u in candidates if is_likely_tracker(u)] or candidates[:10]
 
                 if to_classify:
