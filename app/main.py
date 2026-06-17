@@ -13,6 +13,9 @@ from .scheduler import scan, start_scheduler
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 
+APP_VERSION = "1.0.0"
+GITHUB_URL = "https://github.com/Marvellous-Codeworks/mailtrack-hunter"
+
 _scheduler = None
 
 
@@ -50,11 +53,13 @@ async def dashboard(request: Request):
     last_scan = dict(last_scan_row) if last_scan_row else None
 
     return templates.TemplateResponse("index.html", {
-        "request":    request,
-        "stats":      stats,
-        "last_scan":  last_scan,
-        "candidates": candidates,
+        "request":      request,
+        "stats":        stats,
+        "last_scan":    last_scan,
+        "candidates":   candidates,
         "poll_interval": int(os.getenv("POLL_INTERVAL_MINUTES", 30)),
+        "version":      APP_VERSION,
+        "github_url":   GITHUB_URL,
     })
 
 
