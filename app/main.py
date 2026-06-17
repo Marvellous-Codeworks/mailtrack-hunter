@@ -152,11 +152,26 @@ async def export_full():
     )
 
 
+_DEDICATED_TRACKER_PREFIXES = {
+    "t", "trk", "track", "open", "pixel", "beacon", "spy", "wf", "e", "mltrk", "r"
+}
+
+
+def _make_url_filter(domain: str, url_example: str) -> str:
+    """Block at domain level for dedicated tracker subdomains; at path level otherwise."""
+    from urllib.parse import urlparse
+    prefix = domain.split(".")[0].lower()
+    if prefix in _DEDICATED_TRACKER_PREFIXES:
+        return f"||{domain}^"
+    parsed = urlparse(url_example)
+    return f"||{domain}{parsed.path}^"
+
+
 @app.get("/api/export/rules")
 async def export_rules():
     with get_conn() as conn:
         rows = conn.execute(
-            "SELECT domain FROM tracker_candidates WHERE status='approved' ORDER BY found_at"
+            "SELECT domain, url_example FROM tracker_candidates WHERE status='approved' ORDER BY found_at"
         ).fetchall()
 
     rules = []
@@ -166,7 +181,7 @@ async def export_rules():
             "priority": 2,
             "action": {"type": "block"},
             "condition": {
-                "urlFilter": f"||{row['domain']}^",
+                "urlFilter": _make_url_filter(row["domain"], row["url_example"]),
                 "resourceTypes": ["image", "ping", "other", "xmlhttprequest"],
             },
         })
