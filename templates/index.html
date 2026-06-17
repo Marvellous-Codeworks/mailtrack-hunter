@@ -158,6 +158,9 @@
     <button class="tab"        data-filter="pending"  onclick="setFilter(this)">Pending ({{ stats.pending }})</button>
     <button class="tab"        data-filter="approved" onclick="setFilter(this)">Approved ({{ stats.approved }})</button>
     <button class="tab"        data-filter="rejected" onclick="setFilter(this)">Rejected ({{ stats.rejected }})</button>
+    {% if stats.proposed > 0 %}
+    <button class="tab tab-proposed" data-filter="proposed" onclick="setFilter(this)">Proposed ({{ stats.proposed }})</button>
+    {% endif %}
   </div>
 
   <!-- Candidates table -->
@@ -178,7 +181,7 @@
       </thead>
       <tbody id="candidates-body">
         {% for c in candidates %}
-        <tr class="candidate-row" data-status="{{ c.status }}" data-id="{{ c.id }}">
+        <tr class="candidate-row" data-status="{{ c.status }}" data-id="{{ c.id }}" {% if c.github_proposed_at %}data-proposed="1"{% endif %}>
           <td class="col-check" style="display:none"><input type="checkbox" class="row-check" value="{{ c.id }}" onchange="updateBulkBar()"></td>
           <td class="col-domain"><code>{{ c.domain }}</code></td>
           <td class="col-url"    title="{{ c.url_example }}">{{ c.url_example }}</td>
@@ -234,7 +237,10 @@
       t.classList.toggle('active', t.dataset.filter === filter)
     );
     document.querySelectorAll('.candidate-row').forEach(row => {
-      row.style.display = (filter === 'all' || row.dataset.status === filter) ? '' : 'none';
+      const show = filter === 'all'
+        || row.dataset.status === filter
+        || (filter === 'proposed' && row.dataset.proposed === '1');
+      row.style.display = show ? '' : 'none';
     });
   }
 

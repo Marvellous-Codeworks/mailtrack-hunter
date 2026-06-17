@@ -54,6 +54,7 @@ async def dashboard(request: Request):
             "approved":  conn.execute("SELECT COUNT(*) FROM tracker_candidates WHERE status='approved'").fetchone()[0],
             "rejected":  conn.execute("SELECT COUNT(*) FROM tracker_candidates WHERE status='rejected'").fetchone()[0],
             "processed": conn.execute("SELECT COUNT(*) FROM processed_emails").fetchone()[0],
+            "proposed":  conn.execute("SELECT COUNT(*) FROM tracker_candidates WHERE github_proposed_at IS NOT NULL").fetchone()[0],
         }
         last_scan_row = conn.execute(
             "SELECT scanned_at, folder, emails_checked, new_candidates FROM scan_log ORDER BY id DESC LIMIT 1"

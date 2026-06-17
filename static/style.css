@@ -153,6 +153,9 @@ main { padding: 24px 28px; max-width: 1440px; }
 }
 .tab:hover { border-color: var(--primary); color: var(--primary); }
 .tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tab-proposed { color: #4338ca; border-color: #c7d2fe; }
+.tab-proposed:hover { border-color: #4338ca; color: #4338ca; background: #eef2ff; }
+.tab-proposed.active { background: #4338ca; border-color: #4338ca; color: #fff; }
 
 /* ── Table ── */
 .table-wrap {
