@@ -106,6 +106,9 @@ main { padding: 24px 28px; max-width: 1440px; }
 
 /* ── Buttons ── */
 .btn {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
   padding: 6px 14px;
   border-radius: 7px;
   border: 1px solid var(--border);
@@ -113,7 +116,9 @@ main { padding: 24px 28px; max-width: 1440px; }
   cursor: pointer;
   font-size: 13px;
   font-family: inherit;
+  font-weight: 400;
   line-height: 1.5;
+  white-space: nowrap;
   text-decoration: none;
   color: var(--text);
   display: inline-flex;
