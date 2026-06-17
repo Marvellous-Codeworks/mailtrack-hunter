@@ -62,15 +62,17 @@ main { padding: 24px 28px; max-width: 1440px; }
 .stat-card::after {
   content: '';
   position: absolute;
-  right: -16px;
-  bottom: -16px;
-  width: 120px;
-  height: 120px;
+  right: -18px;
+  bottom: -18px;
+  width: 130px;
+  height: 130px;
   background-size: contain;
   background-repeat: no-repeat;
-  background-position: bottom right;
-  opacity: 0.15;
+  background-position: center;
+  opacity: 0.18;
   pointer-events: none;
+  transform: rotate(-20deg);
+  transform-origin: center;
 }
 .stat-card:not(.pending):not(.approved):not(.rejected)::after {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2364748b'%3E%3Cpath d='M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z'/%3E%3C/svg%3E");
