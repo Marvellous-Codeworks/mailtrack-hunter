@@ -81,4 +81,4 @@ docker run -d \
 
 ## License
 
-See [LICENSE.md](LICENSE.md).
+See [LICENSE](LICENSE).
