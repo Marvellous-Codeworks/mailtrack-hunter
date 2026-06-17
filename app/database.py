@@ -10,6 +10,7 @@ def _migrate(conn):
     for col, definition in [
         ("github_proposed_at", "TEXT"),
         ("github_issue_id",    "INTEGER"),
+        ("suggested_filter",   "TEXT"),
     ]:
         if col not in existing:
             conn.execute(f"ALTER TABLE tracker_candidates ADD COLUMN {col} {definition}")
@@ -37,7 +38,8 @@ def init_db():
                 claude_reasoning TEXT,
                 status           TEXT NOT NULL DEFAULT 'pending',
                 github_proposed_at TEXT,
-                github_issue_id    INTEGER
+                github_issue_id    INTEGER,
+                suggested_filter   TEXT
             );
 
             CREATE TABLE IF NOT EXISTS scan_log (

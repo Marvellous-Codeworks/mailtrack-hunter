@@ -284,7 +284,9 @@ def _stable_path_prefix(path: str) -> str | None:
     return ("/" + "/".join(stable)) if stable else None
 
 
-def _make_url_filter(domain: str, url_example: str) -> str:
+def _make_url_filter(domain: str, url_example: str, suggested_filter: str | None = None) -> str:
+    if suggested_filter:
+        return suggested_filter
     prefix = domain.split(".")[0].lower()
     if prefix in _DEDICATED_TRACKER_PREFIXES:
         return f"||{domain}^"
@@ -309,7 +311,7 @@ async def export_rules():
             "priority": 2,
             "action": {"type": "block"},
             "condition": {
-                "urlFilter": _make_url_filter(row["domain"], row["url_example"]),
+                "urlFilter": _make_url_filter(row["domain"], row["url_example"], row["suggested_filter"]),
                 "resourceTypes": ["image", "ping", "other", "xmlhttprequest"],
             },
         })
@@ -365,7 +367,7 @@ _GITHUB_URL_LIMIT = 7500
 
 def _build_issue_url(batch: list, skipped: int, total_remaining: int) -> str:
     table_lines = "\n".join(
-        f"| `{r['domain']}` | `{_make_url_filter(r['domain'], r['url_example'])}` | {r['claude_reasoning'] or ''} |"
+        f"| `{r['domain']}` | `{_make_url_filter(r['domain'], r['url_example'], r['suggested_filter'])}` | {r['claude_reasoning'] or ''} |"
         for r in batch
     )
     rules_fragment = json.dumps([
@@ -374,7 +376,7 @@ def _build_issue_url(batch: list, skipped: int, total_remaining: int) -> str:
             "priority": 2,
             "action": {"type": "block"},
             "condition": {
-                "urlFilter": _make_url_filter(r["domain"], r["url_example"]),
+                "urlFilter": _make_url_filter(r["domain"], r["url_example"], r["suggested_filter"]),
                 "resourceTypes": ["image", "ping", "other", "xmlhttprequest"],
             },
         }

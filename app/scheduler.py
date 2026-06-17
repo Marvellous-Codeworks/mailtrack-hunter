@@ -100,8 +100,8 @@ def _store_candidate(result: dict, item: dict):
         conn.execute(
             """INSERT OR IGNORE INTO tracker_candidates
                (domain, url_example, source_message_id, source_sender, source_subject,
-                found_at, claude_reasoning, status)
-               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')""",
+                found_at, claude_reasoning, status, suggested_filter)
+               VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?)""",
             (
                 result["domain"],
                 result["url"],
@@ -110,6 +110,7 @@ def _store_candidate(result: dict, item: dict):
                 item["subject"],
                 datetime.now(timezone.utc).isoformat(),
                 result.get("reason", ""),
+                result.get("url_filter") or None,
             ),
         )
 

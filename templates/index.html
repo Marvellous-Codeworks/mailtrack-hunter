@@ -182,7 +182,12 @@
         {% for c in candidates %}
         <tr class="candidate-row" data-status="{{ c.status }}" data-id="{{ c.id }}" {% if c.github_proposed_at %}data-proposed="1"{% endif %}>
           <td class="col-check" style="display:none"><input type="checkbox" class="row-check" value="{{ c.id }}" onchange="updateBulkBar()"></td>
-          <td class="col-domain"><code>{{ c.domain }}</code></td>
+          <td class="col-domain">
+            <code>{{ c.domain }}</code>
+            {% if c.suggested_filter %}
+            <br><span class="suggested-filter" title="urlFilter suggerito da Claude"><code>{{ c.suggested_filter }}</code></span>
+            {% endif %}
+          </td>
           <td class="col-url"    title="{{ c.url_example }}">{{ c.url_example }}</td>
           <td class="col-source" title="{{ c.source_sender }} — {{ c.source_subject }}">{{ c.source_sender }}</td>
           <td class="col-date">{{ c.found_at[:10] }}</td>

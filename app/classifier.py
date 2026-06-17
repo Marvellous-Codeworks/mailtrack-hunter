@@ -37,6 +37,20 @@ Respond ONLY with a valid JSON array. Each element must have:
   "is_tracker" – boolean
   "confidence" – "high", "medium", or "low"
   "reason"     – one concise sentence explaining why it is a silent pixel
+  "url_filter" – the declarativeNetRequest urlFilter string to block this tracker. Rules:
+                  • ||domain^ covers the domain AND all its subdomains — use this when the
+                    entire domain/parent-domain is dedicated to tracking (e.g. "||mjt.lu^"
+                    covers t.mjt.lu, s6zih.mjt.lu, etc.)
+                  • For shared or generic domains use "||domain/stable-path^", where
+                    stable-path is the non-dynamic path prefix — stop before any UUID,
+                    long encoded string, hash, or per-recipient token
+                  • ^ matches any URL separator (/, ?, end of string); no trailing slash needed
+                  • Never include per-recipient tokens, UUIDs, hashes, or encoded identifiers
+                  • Examples:
+                    - t.mailtrack.io  → "||mailtrack.io^"
+                    - cmail20.com/t/r-o-abc123/o.gif → "||cmail20.com/t^"
+                    - s4.exct.net/lib/fe9115.../track.png → "||s4.exct.net/lib^"
+                    - api.example.com/v1/pixel/track → "||api.example.com/v1/pixel/track^"
 
 Include ONLY entries where is_tracker is true and confidence is high or medium.
 If none qualify, return an empty array []."""
@@ -52,7 +66,7 @@ def classify_urls(urls: list[str]) -> list[dict]:
 
     response = get_client().messages.create(
         model=MODEL,
-        max_tokens=1024,
+        max_tokens=2048,
         system=_SYSTEM,
         messages=[{
             "role": "user",
