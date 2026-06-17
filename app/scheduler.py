@@ -1,6 +1,6 @@
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
@@ -103,7 +103,12 @@ def _store_candidate(result: dict, item: dict):
 
 def start_scheduler() -> BackgroundScheduler:
     scheduler = BackgroundScheduler()
-    scheduler.add_job(scan, "interval", minutes=POLL_INTERVAL, id="imap_scan")
+    scheduler.add_job(
+        scan,
+        "interval",
+        minutes=POLL_INTERVAL,
+        id="imap_scan",
+        next_run_time=datetime.now(timezone.utc) + timedelta(seconds=2),
+    )
     scheduler.start()
-    scan()  # run immediately on startup
     return scheduler
