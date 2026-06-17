@@ -133,10 +133,12 @@ main { padding: 24px 28px; max-width: 1440px; }
 .btn-primary { color: var(--primary); border-color: #bfdbfe; }
 .btn-primary:hover { background: #eff6ff; }
 .btn-sm { padding: 3px 9px; font-size: 12px; }
-.btn-approve { color: var(--success); border-color: #bbf7d0; }
+.btn-approve   { color: var(--success); border-color: #bbf7d0; }
 .btn-approve:hover { background: #f0fdf4; }
-.btn-reject  { color: var(--danger);  border-color: #fecaca; }
+.btn-reject    { color: var(--danger);  border-color: #fecaca; }
 .btn-reject:hover  { background: #fff1f2; }
+.btn-proposed  { color: #4338ca; border-color: #c7d2fe; }
+.btn-proposed:hover { background: #eef2ff; }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 
 /* ── Filter tabs ── */

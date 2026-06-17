@@ -120,7 +120,7 @@
             <li><b>Scan now</b> — triggers an immediate scan without waiting for the next interval</li>
             <li><b>Auto-classify known</b> — automatically approves or rejects pending candidates whose parent domain (e.g. <code>example.com</code>) already has a decision under a different subdomain</li>
             <li><b>Purge rejected</b> — permanently deletes all rejected candidates to keep the table clean</li>
-            <li><b>Select</b> — enables multi-select mode with checkboxes for bulk approve / reject / delete; click <b>Done</b> to exit</li>
+            <li><b>Select</b> — enables multi-select mode with checkboxes for bulk approve / reject / delete / reset proposed; click <b>Done</b> to exit; the <b>Reset proposed</b> button appears automatically when at least one selected candidate is <span class="badge badge-proposed">Proposed</span></li>
           </ul>
         </div>
         <div>
@@ -128,7 +128,7 @@
           <ul>
             <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
             <li><b>Export rules.json</b> — approved domains as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code></li>
-            <li><b>Propose to Block Mailtrack (N)</b> — opens a pre-filled GitHub Issue with N approved candidates not yet proposed and not already covered by Block Mailtrack's live rules (fetched from GitHub, refreshed every hour); candidates are marked as <span class="badge badge-proposed">Proposed</span> only after you confirm by entering the issue number; click <b>&times;</b> next to the badge to reset and re-propose</li>
+            <li><b>Propose to Block Mailtrack (N)</b> — opens a pre-filled GitHub Issue with N approved candidates not yet proposed and not already covered by Block Mailtrack's live rules (fetched from GitHub, refreshed every hour); candidates are marked as <span class="badge badge-proposed">Proposed</span> only after you confirm by entering the issue number; click <b>&times;</b> next to the badge to reset individually, or use <b>Select</b> + <b>Reset proposed</b> in the bulk bar for multiple candidates at once</li>
           </ul>
         </div>
         <div>
@@ -149,6 +149,7 @@
     <button class="btn btn-sm btn-approve" onclick="bulkAction('approve')">Approve all</button>
     <button class="btn btn-sm btn-reject"  onclick="bulkAction('reject')">Reject all</button>
     <button class="btn btn-sm btn-reject"  onclick="bulkAction('delete')">Delete all</button>
+    <button class="btn btn-sm btn-proposed" id="bulk-reset-proposed-btn" onclick="bulkAction('reset-proposed')" style="display:none">Reset proposed</button>
     <button class="btn btn-sm"             onclick="clearSelection()">Clear</button>
   </div>
 
@@ -158,9 +159,7 @@
     <button class="tab"        data-filter="pending"  onclick="setFilter(this)">Pending ({{ stats.pending }})</button>
     <button class="tab"        data-filter="approved" onclick="setFilter(this)">Approved ({{ stats.approved }})</button>
     <button class="tab"        data-filter="rejected" onclick="setFilter(this)">Rejected ({{ stats.rejected }})</button>
-    {% if stats.proposed > 0 %}
-    <button class="tab tab-proposed" data-filter="proposed" onclick="setFilter(this)">Proposed ({{ stats.proposed }})</button>
-    {% endif %}
+    {% if stats.proposed > 0 %}<button class="tab tab-proposed" data-filter="proposed" onclick="setFilter(this)">Proposed ({{ stats.proposed }})</button>{% endif %}
   </div>
 
   <!-- Candidates table -->
@@ -312,6 +311,9 @@
     const count = document.getElementById('bulk-count');
     bar.style.display = ids.length ? 'flex' : 'none';
     count.textContent = `${ids.length} selected`;
+    const anyProposed = [...document.querySelectorAll('.row-check:checked')]
+      .some(c => c.closest('tr').dataset.proposed === '1');
+    document.getElementById('bulk-reset-proposed-btn').style.display = anyProposed ? '' : 'none';
   }
 
   function toggleSelectAll(cb) {
@@ -329,8 +331,9 @@
   async function bulkAction(action) {
     const ids = getSelectedIds();
     if (!ids.length) return;
-    const endpoint = action === 'delete' ? '/api/candidates/bulk-delete'
-                   : action === 'approve' ? '/api/candidates/bulk-approve'
+    const endpoint = action === 'delete'          ? '/api/candidates/bulk-delete'
+                   : action === 'approve'         ? '/api/candidates/bulk-approve'
+                   : action === 'reset-proposed'  ? '/api/candidates/reset-proposed'
                    : '/api/candidates/bulk-reject';
     await fetch(endpoint, {
       method: 'POST',
