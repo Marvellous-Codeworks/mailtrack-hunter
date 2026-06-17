@@ -168,6 +168,25 @@ code { font-family: "SF Mono", "Fira Code", Menlo, monospace; font-size: 12px; }
 
 .empty-row td { text-align: center; color: var(--muted); padding: 32px; font-size: 13px; }
 
+/* ── Back to top ── */
+#top-btn {
+  display: none;
+  position: fixed;
+  bottom: 28px;
+  right: 28px;
+  padding: 8px 14px;
+  background: var(--header-bg);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,.25);
+  z-index: 100;
+  transition: opacity .2s;
+}
+#top-btn:hover { opacity: .8; }
+
 /* ── Bulk action bar ── */
 .bulk-bar {
   display: none;
