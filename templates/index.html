@@ -72,8 +72,8 @@
       <button class="btn" onclick="autoClassifyByParent()" title="Auto-approve/reject pending candidates based on their parent domain's existing status">Auto-classify known</button>
       <button class="btn btn-reject" onclick="purgeRejected()" title="Permanently delete all rejected candidates">Purge rejected</button>
       <button class="btn" id="bulk-toggle" onclick="toggleBulkMode()" title="Toggle multi-select mode">Select</button>
-      <a href="/api/export/full"  class="btn" title="Full JSON with metadata">Export full JSON</a>
-      <a href="/api/export/rules" class="btn btn-primary" title="Ready-to-paste rules.json fragment">Export rules.json</a>
+      <button class="btn" onclick="window.location='/api/export/full'" title="Full JSON with metadata">Export full JSON</button>
+      <button class="btn btn-primary" onclick="window.location='/api/export/rules'" title="Ready-to-paste rules.json fragment">Export rules.json</button>
       <button class="btn btn-primary" id="propose-btn" onclick="proposeToBlockMailtrack()"
         {% if unproposed_count == 0 %}disabled title="No new approved candidates to propose"{% else %}title="Open a pre-filled GitHub Issue on block-mailtrack with {{ unproposed_count }} new rule(s)"{% endif %}>
         Propose to Block Mailtrack{% if unproposed_count > 0 %} ({{ unproposed_count }}){% endif %}
