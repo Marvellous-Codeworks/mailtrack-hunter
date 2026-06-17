@@ -363,7 +363,8 @@
     const issueNum = prompt(
       `GitHub Issue opened with ${data.count} rule(s)` +
       (data.skipped ? ` (${data.skipped} already in block-mailtrack, skipped)` : '') +
-      `.\n\nEnter the issue number to record it (leave blank to cancel and try again later):`,
+      (data.remaining ? ` — ${data.remaining} more will be proposed in the next batch.` : ' — all done!') +
+      `\n\nEnter the issue number to record it (leave blank to cancel and try again later):`,
       ''
     );
 
