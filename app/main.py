@@ -129,33 +129,42 @@ async def purge_rejected():
     return {"ok": True, "deleted": result.rowcount}
 
 
-@app.api_route("/api/auto-approve-by-parent", methods=["GET", "POST"])
-async def auto_approve_by_parent():
-    """Auto-approve pending candidates whose parent domain matches an already-approved one."""
+def _parent(domain: str) -> str:
+    parts = domain.split(".")
+    return ".".join(parts[-2:]) if len(parts) >= 2 else domain
+
+
+@app.api_route("/api/auto-classify-by-parent", methods=["GET", "POST"])
+async def auto_classify_by_parent():
+    """Auto-approve/reject pending candidates based on their parent domain's existing status."""
     with get_conn() as conn:
-        approved = conn.execute(
-            "SELECT domain FROM tracker_candidates WHERE status='approved'"
+        decided = conn.execute(
+            "SELECT domain, status FROM tracker_candidates WHERE status IN ('approved','rejected')"
         ).fetchall()
         pending = conn.execute(
             "SELECT id, domain FROM tracker_candidates WHERE status='pending'"
         ).fetchall()
 
-    def parent(domain: str) -> str:
-        parts = domain.split(".")
-        return ".".join(parts[-2:]) if len(parts) >= 2 else domain
+    approved_parents = {_parent(r["domain"]) for r in decided if r["status"] == "approved"}
+    rejected_parents = {_parent(r["domain"]) for r in decided if r["status"] == "rejected"}
 
-    approved_parents = {parent(r["domain"]) for r in approved}
+    to_approve = [r["id"] for r in pending if _parent(r["domain"]) in approved_parents]
+    to_reject  = [r["id"] for r in pending if _parent(r["domain"]) in rejected_parents
+                  and r["id"] not in to_approve]
 
-    to_approve = [r["id"] for r in pending if parent(r["domain"]) in approved_parents]
-
-    if to_approve:
-        with get_conn() as conn:
+    with get_conn() as conn:
+        if to_approve:
             conn.executemany(
                 "UPDATE tracker_candidates SET status='approved' WHERE id=?",
                 [(i,) for i in to_approve]
             )
+        if to_reject:
+            conn.executemany(
+                "UPDATE tracker_candidates SET status='rejected' WHERE id=?",
+                [(i,) for i in to_reject]
+            )
 
-    return {"ok": True, "auto_approved": len(to_approve)}
+    return {"ok": True, "auto_approved": len(to_approve), "auto_rejected": len(to_reject)}
 
 
 @app.api_route("/api/clean", methods=["GET", "POST"])

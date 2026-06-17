@@ -69,7 +69,7 @@
     </span>
     <div class="toolbar-actions">
       <button class="btn" id="scan-btn" onclick="triggerScan()">Scan now</button>
-      <button class="btn btn-approve" onclick="autoApproveByParent()" title="Auto-approve pending candidates whose parent domain is already approved">Auto-approve known</button>
+      <button class="btn" onclick="autoClassifyByParent()" title="Auto-approve/reject pending candidates based on their parent domain's existing status">Auto-classify known</button>
       <button class="btn btn-reject" onclick="purgeRejected()" title="Permanently delete all rejected candidates">Purge rejected</button>
       <button class="btn" id="bulk-toggle" onclick="toggleBulkMode()" title="Toggle multi-select mode">Select</button>
       <a href="/api/export/full"  class="btn" title="Full JSON with metadata">Export full JSON</a>
@@ -100,7 +100,7 @@
           <strong>Toolbar</strong>
           <ul>
             <li><b>Scan now</b> — triggers an immediate scan without waiting for the next interval</li>
-            <li><b>Auto-approve known</b> — automatically approves pending candidates whose parent domain (e.g. <code>example.com</code>) is already approved under a different subdomain</li>
+            <li><b>Auto-classify known</b> — automatically approves or rejects pending candidates whose parent domain (e.g. <code>example.com</code>) already has a decision under a different subdomain</li>
             <li><b>Purge rejected</b> — permanently deletes all rejected candidates to keep the table clean</li>
             <li><b>Select</b> — enables multi-select mode with checkboxes for bulk approve / reject / delete; click <b>Done</b> to exit</li>
           </ul>
@@ -116,7 +116,7 @@
           <strong>Maintenance API</strong>
           <ul>
             <li><code>GET /api/clean</code> — removes pending candidates that would be excluded by current filtering rules (ESP click-tracking domains, non-image extensions); call this after updating the scanner logic</li>
-            <li><code>GET /api/auto-approve-by-parent</code> — same as the toolbar button, callable directly</li>
+            <li><code>GET /api/auto-classify-by-parent</code> — same as the toolbar button, callable directly</li>
           </ul>
         </div>
       </div>
@@ -231,10 +231,10 @@
     reloadKeepingFilter();
   }
 
-  async function autoApproveByParent() {
-    const res = await fetch('/api/auto-approve-by-parent', { method: 'POST' });
+  async function autoClassifyByParent() {
+    const res = await fetch('/api/auto-classify-by-parent', { method: 'POST' });
     const data = await res.json();
-    alert(`Auto-approved ${data.auto_approved} candidate(s) based on known parent domains.`);
+    alert(`Auto-approved ${data.auto_approved}, auto-rejected ${data.auto_rejected} candidate(s).`);
     reloadKeepingFilter();
   }
 
