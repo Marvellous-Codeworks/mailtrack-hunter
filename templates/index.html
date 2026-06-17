@@ -58,6 +58,41 @@
     </div>
   </div>
 
+  <!-- Legend -->
+  <details class="legend">
+    <summary>How does this work?</summary>
+    <div class="legend-body">
+      <div class="legend-section">
+        <strong>Workflow</strong>
+        <p>Mailtrack Hunter scans your inbox periodically, pre-filters commercial emails by header (free), extracts image URLs, then asks Claude to classify unknown ones as potential trackers. Candidates appear here for your review before anything touches the extension.</p>
+      </div>
+      <div class="legend-grid">
+        <div>
+          <strong>Candidate actions</strong>
+          <ul>
+            <li><span class="badge badge-pending">Pending</span> — found by Claude, waiting for your review</li>
+            <li><b>Approve</b> — confirms the domain is a real tracker; it will appear in both exports</li>
+            <li><b>Reject</b> — marks it as a false positive; excluded from exports but kept as history</li>
+            <li><b>Reset</b> — moves an approved or rejected candidate back to Pending</li>
+          </ul>
+        </div>
+        <div>
+          <strong>Export buttons</strong>
+          <ul>
+            <li><b>Export full JSON</b> — all approved candidates with full metadata (domain, source email, Claude's reasoning, timestamp); useful for auditing or feeding back to Claude</li>
+            <li><b>Export rules.json</b> — approved domains formatted as <code>declarativeNetRequest</code> rules, ready to merge into Block Mailtrack's <code>rules/rules.json</code></li>
+          </ul>
+        </div>
+        <div>
+          <strong>Toolbar</strong>
+          <ul>
+            <li><b>Scan now</b> — triggers an immediate scan without waiting for the next scheduled interval</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </details>
+
   <!-- Filter tabs -->
   <div class="filter-tabs">
     <button class="tab active" data-filter="all"      onclick="setFilter(this)">All ({{ stats.pending + stats.approved + stats.rejected }})</button>
