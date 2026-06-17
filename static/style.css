@@ -127,8 +127,8 @@ main { padding: 24px 28px; max-width: 1440px; }
   transition: background .15s, border-color .15s;
 }
 .btn:hover { background: var(--bg); }
-.btn-primary { background: var(--primary); color: #fff; border-color: var(--primary); }
-.btn-primary:hover { background: var(--primary-h); border-color: var(--primary-h); }
+.btn-primary { color: var(--primary); border-color: #bfdbfe; }
+.btn-primary:hover { background: #eff6ff; }
 .btn-sm { padding: 3px 9px; font-size: 12px; }
 .btn-approve { color: var(--success); border-color: #bbf7d0; }
 .btn-approve:hover { background: #f0fdf4; }
